@@ -1,0 +1,4 @@
+{:api-endpoint "http://localhost:8080/4/" ;; the api endpoint you wish to query
+ :entity-type "Weather Station" ;; the entity type you are searching for
+ :project-id "" ;; the project id you want to use
+ }
