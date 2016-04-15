@@ -38,11 +38,13 @@
                      (get-in ["entities"]))]
     (mapv (fn [entity] (get entity "entity_id")) entities)))
 
-;; TODO - read hecuba username/password from the command line opt, do not place in edn file.
 (defn -main [& args]
-  (let [config (-> (parse-opts args cli-options) :options :config)
-        {:keys [project-id api-endpoint entity-type]} (load-config config)]
+  (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
+        {:keys [project-id api-endpoint entity-type max-entries-per-page]} (load-config config)]
     (get-entity-ids
+     username
+     password
      project-id
      api-endpoint
-     entity-type)))
+     entity-type
+     max-entries-per-page)))
