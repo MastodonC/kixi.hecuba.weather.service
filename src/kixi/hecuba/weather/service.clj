@@ -31,7 +31,6 @@
                                                    (get entity "entity_id")
                                                    entity-type
                                                    entity-action))))))
-
 (defn run-api-search [args-map]
   (let [url-to-get (str (:api-endpoint args-map)
                         "entities/?q=property_type:"
@@ -57,7 +56,7 @@
 
 (defn -main [& args]
   (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
-        base-system  (load-config config)
+        base-system  (assoc (load-config config) :username username :password password)
         system (assoc base-system :kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist base-system)
                                                                    "serializer.class" "kafka.serializer.DefaultEncoder"
                                                                    "partitioner.class" "kafka.producer.DefaultPartitioner"}))]
