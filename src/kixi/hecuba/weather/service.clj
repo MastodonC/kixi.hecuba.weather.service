@@ -3,7 +3,9 @@
             [clojure.tools.cli :refer [parse-opts]]
             [clj-http.client :as client]
             [clojure.data.json :as json]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clj-kafka.producer :as kafka]
+            [clj-kafka.zk :as zk])
   (:gen-class))
 
 (def cli-options
@@ -16,6 +18,19 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
+(defn gen-message [entity-id entity-type entity-action]
+  (json/write-str {:entity-id entity-id
+                   :entity-type entity-type
+                   :entity-action entity-action}))
+
+(defn send-to-kafka [args-map entity]
+  (let [{:keys [kafka-producer entity-type entity-action kafka-topic]} args-map]
+    (kafka/send-message kafka-producer
+                        (kafka/message kafka-topic
+                                       (.getBytes (gen-message
+                                                   (get entity "entity_id")
+                                                   entity-type
+                                                   entity-action))))))
 (defn run-api-search [args-map]
   (let [url-to-get (str (:api-endpoint args-map)
                         "entities/?q=property_type:"
@@ -36,16 +51,14 @@
          (catch Exception e (println e)))))
 
 (defn get-entity-ids [args-map]
-  (let [entities (-> (run-api-search args-map)
-                     (get-in ["entities"]))]
-    (mapv (fn [entity] (get entity "entity_id")) entities)))
+  (-> (run-api-search args-map)
+      (get-in ["entities"])))
 
 (defn -main [& args]
   (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
-        {:keys [project-id api-endpoint entity-type max-entries-per-page]} (load-config config)
-        args-map {:username username
-                  :password password
-                  :api-endpoint api-endpoint
-                  :entity-type entity-type
-                  :max-entries-per-page max-entries-per-page}]
-    (get-entity-ids args-map)))
+        base-system  (assoc (load-config config) :username username :password password)
+        system (assoc base-system :kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist base-system)
+                                                                   "serializer.class" "kafka.serializer.DefaultEncoder"
+                                                                   "partitioner.class" "kafka.producer.DefaultPartitioner"}))]
+    (->> (get-entity-ids system)
+         (run! (partial send-to-kafka system)))))

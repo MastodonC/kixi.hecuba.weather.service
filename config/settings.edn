@@ -1,6 +1,8 @@
 {:api-endpoint "http://www.getembed.com/4/" ;; the api endpoint you wish to query
  :entity-type "Weather Station" ;; the entity type you are searching for
- :project-id "" ;; the project id you want to use
- :kafka-endpoint ""
+ :entity-action "pullweather" ;; action request, sent in kafka message
+ :zookeeper "localhost:2181"
+ :kafka-brokerlist "localhost:9092"
+ :kafka-topic "test"
  :max-entries-per-page 200
- }
+ :debugmode false}
