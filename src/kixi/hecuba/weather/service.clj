@@ -4,7 +4,8 @@
             [clj-http.client :as client]
             [clojure.data.json :as json]
             [clojure.string :as str]
-            [clj-kafka.producer :as kafka])
+            [clj-kafka.producer :as kafka]
+            [clj-kafka.zk :as zk])
   (:gen-class))
 
 (def cli-options
@@ -17,16 +18,23 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
-(defn gen-message [entityid entityaction])
+(defn gen-message [entity-id entity-type entity-action]
+  (json/write-str {:entity-id entity-id
+                   :entity-type entity-type
+                   :entity-action entity-action}))
 
 (defn send-to-kafka [args-map entities]
-  (let [zk (kafka/brokers {"zookeeper.connect" (:zookeeper args-map)})
+  (let [zookeeper-brokers (zk/brokers {"zookeeper.connect" (:zookeeper args-map)})
         kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist args-map)
                                         "serializer.class" "kafka.serializer.DefaultEncoder"
                                         "partitioner.class" "kafka.producer.DefaultPartitioner"})]
     (map (fn [entity]
-           (kafka/send-message producer
-                               (message (.getBytes (gen-message entity (:entity-action args-map)))))) entities)))
+           (kafka/send-message kafka-producer
+                               (kafka/message (:kafka-topic args-map)
+                                              (.getBytes (gen-message
+                                                          (get entity "entity_id")
+                                                          (:entity-type args-map)
+                                                          (:entity-action args-map)))))) entities)))
 
 (defn run-api-search [args-map]
   (let [url-to-get (str (:api-endpoint args-map)
@@ -57,7 +65,7 @@
 
 (defn -main [& args]
   (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
-        {:keys [project-id api-endpoint entity-type entity-action max-entries-per-page zookeeper kafka-brokerlist debugmode]} (load-config config)
+        {:keys [project-id api-endpoint entity-type entity-action max-entries-per-page zookeeper kafka-brokerlist kafka-topic debugmode]} (load-config config)
         args-map {:username username
                   :password password
                   :api-endpoint api-endpoint
@@ -66,5 +74,6 @@
                   :max-entries-per-page max-entries-per-page
                   :zookeeper zookeeper
                   :kafka-brokerlist kafka-brokerlist
+                  :kafka-topic kafka-topic
                   :debugmode debugmode}]
     (get-entity-ids args-map)))
