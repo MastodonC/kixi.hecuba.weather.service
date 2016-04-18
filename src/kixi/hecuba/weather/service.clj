@@ -3,7 +3,8 @@
             [clojure.tools.cli :refer [parse-opts]]
             [clj-http.client :as client]
             [clojure.data.json :as json]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [clj-kafka.producer :as kafka])
   (:gen-class))
 
 (def cli-options
@@ -15,6 +16,17 @@
 (defn load-config [filename]
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
+
+(defn gen-message [entityid entityaction])
+
+(defn send-to-kafka [args-map entities]
+  (let [zk (kafka/brokers {"zookeeper.connect" (:zookeeper args-map)})
+        kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist args-map)
+                                        "serializer.class" "kafka.serializer.DefaultEncoder"
+                                        "partitioner.class" "kafka.producer.DefaultPartitioner"})]
+    (map (fn [entity]
+           (kafka/send-message producer
+                               (message (.getBytes (gen-message entity (:entity-action args-map)))))) entities)))
 
 (defn run-api-search [args-map]
   (let [url-to-get (str (:api-endpoint args-map)
@@ -38,14 +50,21 @@
 (defn get-entity-ids [args-map]
   (let [entities (-> (run-api-search args-map)
                      (get-in ["entities"]))]
-    (mapv (fn [entity] (get entity "entity_id")) entities)))
+    (if (= true (:debugmode args-map))
+      (println "In debug mode, not sending to Kafka")
+      (send-to-kafka args-map entities)
+      )))
 
 (defn -main [& args]
   (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
-        {:keys [project-id api-endpoint entity-type max-entries-per-page]} (load-config config)
+        {:keys [project-id api-endpoint entity-type entity-action max-entries-per-page zookeeper kafka-brokerlist debugmode]} (load-config config)
         args-map {:username username
                   :password password
                   :api-endpoint api-endpoint
                   :entity-type entity-type
-                  :max-entries-per-page max-entries-per-page}]
+                  :entity-action entity-action
+                  :max-entries-per-page max-entries-per-page
+                  :zookeeper zookeeper
+                  :kafka-brokerlist kafka-brokerlist
+                  :debugmode debugmode}]
     (get-entity-ids args-map)))
