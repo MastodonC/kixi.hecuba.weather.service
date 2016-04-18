@@ -23,18 +23,14 @@
                    :entity-type entity-type
                    :entity-action entity-action}))
 
-(defn send-to-kafka [args-map entities]
-  (let [zookeeper-brokers (zk/brokers {"zookeeper.connect" (:zookeeper args-map)})
-        kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist args-map)
-                                        "serializer.class" "kafka.serializer.DefaultEncoder"
-                                        "partitioner.class" "kafka.producer.DefaultPartitioner"})]
-    (map (fn [entity]
-           (kafka/send-message kafka-producer
-                               (kafka/message (:kafka-topic args-map)
-                                              (.getBytes (gen-message
-                                                          (get entity "entity_id")
-                                                          (:entity-type args-map)
-                                                          (:entity-action args-map)))))) entities)))
+(defn send-to-kafka [args-map entity]
+  (let [{:keys [kafka-producer entity-type entity-action kafka-topic]} args-map]
+    (kafka/send-message kafka-producer
+                        (kafka/message kafka-topic
+                                       (.getBytes (gen-message
+                                                   (get entity "entity_id")
+                                                   entity-type
+                                                   entity-action))))))
 
 (defn run-api-search [args-map]
   (let [url-to-get (str (:api-endpoint args-map)
@@ -56,24 +52,14 @@
          (catch Exception e (println e)))))
 
 (defn get-entity-ids [args-map]
-  (let [entities (-> (run-api-search args-map)
-                     (get-in ["entities"]))]
-    (if (= true (:debugmode args-map))
-      (println "In debug mode, not sending to Kafka")
-      (send-to-kafka args-map entities)
-      )))
+  (-> (run-api-search args-map)
+      (get-in ["entities"])))
 
 (defn -main [& args]
   (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
-        {:keys [project-id api-endpoint entity-type entity-action max-entries-per-page zookeeper kafka-brokerlist kafka-topic debugmode]} (load-config config)
-        args-map {:username username
-                  :password password
-                  :api-endpoint api-endpoint
-                  :entity-type entity-type
-                  :entity-action entity-action
-                  :max-entries-per-page max-entries-per-page
-                  :zookeeper zookeeper
-                  :kafka-brokerlist kafka-brokerlist
-                  :kafka-topic kafka-topic
-                  :debugmode debugmode}]
-    (get-entity-ids args-map)))
+        base-system  (load-config config)
+        system (assoc base-system :kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist base-system)
+                                                                   "serializer.class" "kafka.serializer.DefaultEncoder"
+                                                                   "partitioner.class" "kafka.producer.DefaultPartitioner"}))]
+    (->> (get-entity-ids system)
+         (run! (partial send-to-kafka system)))))
