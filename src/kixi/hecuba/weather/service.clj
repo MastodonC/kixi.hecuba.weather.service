@@ -18,8 +18,9 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
-(defn gen-message [entity-id entity-type entity-action]
+(defn gen-message [entity-id property-code entity-type entity-action]
   (json/write-str {:entity-id entity-id
+                   :property-code property-code
                    :entity-type entity-type
                    :entity-action entity-action}))
 
@@ -29,19 +30,20 @@
                         (kafka/message kafka-topic
                                        (.getBytes (gen-message
                                                    (get entity "entity_id")
+                                                   (get entity "property_code")
                                                    entity-type
                                                    entity-action))))))
-(defn run-api-search [args-map]
-  (let [url-to-get (str (:api-endpoint args-map)
-                        "entities/?q=property_type:"
-                        (:entity-type args-map)
-                        "&page=0&size="
-                        (:max-entries-per-page args-map)
+(defn run-api-search [{:keys [api-endpoint entity-type max-entries-per-page username password] :as args-map}]
+  (let [url-to-get (str api-endpoint
+                        "entities/?q=property_type:\""
+                        entity-type
+                        "\"&page=0&size="
+                        max-entries-per-page
                         "&sort_key=programme_name.lower_case_sort&sort_order=asc")]
     (try (let [response-json (-> (:body (client/get
                                          url-to-get
-                                         {:basic-auth [(:username args-map)
-                                                       (:password args-map)]
+                                         {:basic-auth [username
+                                                       password ]
                                           :headers {"X-Api-Version" "2"}
                                           :content-type :json
                                           :socket-timeout 20000
