@@ -33,9 +33,8 @@
                                                    (get entity "property_code")
                                                    entity-type
                                                    entity-action))))))
-(defn run-api-search [args-map]
-  (let [{:keys [api-endpoint entity-type max-entries-per-page username password]} args-map
-        url-to-get (str api-endpoint
+(defn run-api-search [{:keys [api-endpoint entity-type max-entries-per-page username password] :as args-map}]
+  (let [url-to-get (str api-endpoint
                         "entities/?q=property_type:\""
                         entity-type
                         "\"&page=0&size="
