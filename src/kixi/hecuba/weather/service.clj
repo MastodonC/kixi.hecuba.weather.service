@@ -34,16 +34,17 @@
                                                    entity-type
                                                    entity-action))))))
 (defn run-api-search [args-map]
-  (let [url-to-get (str (:api-endpoint args-map)
+  (let [{:keys [api-endpoint entity-type max-entries-per-page username password]} args-map
+        url-to-get (str api-endpoint
                         "entities/?q=property_type:\""
-                        (:entity-type args-map)
+                        entity-type
                         "\"&page=0&size="
-                        (:max-entries-per-page args-map)
+                        max-entries-per-page
                         "&sort_key=programme_name.lower_case_sort&sort_order=asc")]
     (try (let [response-json (-> (:body (client/get
                                          url-to-get
-                                         {:basic-auth [(:username args-map)
-                                                       (:password args-map)]
+                                         {:basic-auth [username
+                                                       password ]
                                           :headers {"X-Api-Version" "2"}
                                           :content-type :json
                                           :socket-timeout 20000
