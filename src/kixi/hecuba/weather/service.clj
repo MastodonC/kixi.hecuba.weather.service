@@ -18,9 +18,9 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
-(defn gen-message [entity-id property-id entity-type entity-action]
+(defn gen-message [entity-id property-code entity-type entity-action]
   (json/write-str {:entity-id entity-id
-                   :property-code property-id
+                   :property-code property-code
                    :entity-type entity-type
                    :entity-action entity-action}))
 
