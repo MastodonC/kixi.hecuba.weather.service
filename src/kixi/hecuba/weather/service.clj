@@ -18,8 +18,9 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
-(defn gen-message [entity-id entity-type entity-action]
+(defn gen-message [entity-id property-id entity-type entity-action]
   (json/write-str {:entity-id entity-id
+                   :property-code property-id
                    :entity-type entity-type
                    :entity-action entity-action}))
 
@@ -29,6 +30,7 @@
                         (kafka/message kafka-topic
                                        (.getBytes (gen-message
                                                    (get entity "entity_id")
+                                                   (get entity "property_code")
                                                    entity-type
                                                    entity-action))))))
 (defn run-api-search [args-map]
