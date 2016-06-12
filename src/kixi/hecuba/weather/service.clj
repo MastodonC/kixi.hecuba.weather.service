@@ -18,9 +18,10 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
-(defn gen-message [entity-id property-code entity-type entity-action]
+(defn gen-message [entity-id property-code device_id entity-type entity-action]
   (json/write-str {:entity-id entity-id
                    :property-code property-code
+                   :device_id device_id
                    :entity-type entity-type
                    :entity-action entity-action}))
 
@@ -31,6 +32,9 @@
                                        (.getBytes (gen-message
                                                    (get entity "entity_id")
                                                    (get entity "property_code")
+                                                   (-> (get-in entity ["devices"])
+                                                       first
+                                                       (get "device_id"))
                                                    entity-type
                                                    entity-action))))))
 (defn run-api-search [{:keys [api-endpoint entity-type max-entries-per-page username password] :as args-map}]
