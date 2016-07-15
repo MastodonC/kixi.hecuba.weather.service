@@ -3,6 +3,6 @@
  :entity-action "pullweather" ;; action request, sent in kafka message
  :zookeeper "localhost:2181"
  :kafka-brokerlist "localhost:9092"
- :kafka-topic "test"
+ :kafka-topic "hecuba-weather-queue"
  :max-entries-per-page 200
  :debugmode false}
