@@ -18,26 +18,34 @@
   (with-open [r (io/reader filename)]
     (read (java.io.PushbackReader. r))))
 
-(defn gen-message [entity-id property-code entity-type entity-action]
-  (json/write-str {:entity-id entity-id
+(defn gen-message [programme-id entity-id property-code device_id entity-type entity-action]
+  (json/write-str {:programme_id programme-id
+                   :entity-id entity-id
                    :property-code property-code
+                   :device_id device_id
                    :entity-type entity-type
                    :entity-action entity-action}))
 
 (defn send-to-kafka [args-map entity]
-  (let [{:keys [kafka-producer entity-type entity-action kafka-topic]} args-map]
+  (let [{:keys [kafka-producer entity-type programme-id entity-action kafka-topic]} args-map]
     (kafka/send-message kafka-producer
                         (kafka/message kafka-topic
                                        (.getBytes (gen-message
+                                                   (get entity "programme_id")
                                                    (get entity "entity_id")
                                                    (get entity "property_code")
+                                                   (-> (get-in entity ["devices"])
+                                                       first
+                                                       (get "device_id"))
                                                    entity-type
                                                    entity-action))))))
-(defn run-api-search [{:keys [api-endpoint entity-type max-entries-per-page username password] :as args-map}]
+(defn run-api-search [{:keys [api-endpoint entity-type programme-id  max-entries-per-page username password] :as args-map}]
   (let [url-to-get (str api-endpoint
                         "entities/?q=property_type:\""
                         entity-type
-                        "\"&page=0&size="
+                        "\" AND programme_id:"
+                        programme-id
+                        "&page=0&size="
                         max-entries-per-page
                         "&sort_key=programme_name.lower_case_sort&sort_order=asc")]
     (try (let [response-json (-> (:body (client/get
