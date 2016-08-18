@@ -48,7 +48,6 @@
                         "&page=0&size="
                         max-entries-per-page
                         "&sort_key=programme_name.lower_case_sort&sort_order=asc")]
-    (println url-to-get)
     (try (let [response-json (-> (:body (client/get
                                          url-to-get
                                          {:basic-auth [username
