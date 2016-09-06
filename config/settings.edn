@@ -1,9 +1,7 @@
 {:api-endpoint "http://www.getembed.com/4/" ;; REQUIRED - the api endpoint you wish to query
- :programme-id "" ;; REQUIRED - a Hecuba programme id
  :entity-type "Weather Station" ;; REQUIRED - the entity type you are searching for
  :entity-action "pullweather" ;; action request, sent in kafka message
- :zookeeper "localhost:2181" ;; REQUIRED - Zookeeper address:port
- :kafka-brokerlist "localhost:9092" ;; REQUIRED - Kafka address:port
- :kafka-topic "test-topic" ;; REQUIRED - Kafka topic to publish to.
+ :zookeeper "marathon.mesos:2181" ;; REQUIRED - Zookeeper address:port
+ :kafka-topic "hecuba-weather-queue" ;; REQUIRED - Kafka topic to publish to.
  :max-entries-per-page 200
  :debugmode false}

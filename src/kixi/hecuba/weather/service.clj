@@ -4,6 +4,7 @@
             [clj-http.client :as client]
             [clojure.data.json :as json]
             [clojure.string :as str]
+            [taoensso.timbre :as timbre]
             [clj-kafka.producer :as kafka]
             [clj-kafka.zk :as zk])
   (:gen-class))
@@ -12,7 +13,11 @@
   [["-c" "--config CONFIG" "Path to config edn file."
     :default "config/settings.edn"]
    ["-u" "--username USERNAME" "Your username."]
-   ["-p" "--password PASSWORD" "Your password."]])
+   ["-p" "--password PASSWORD" "Your password."]
+   ["-a" "--aprogramme APROGRAMME" "The Hecuba Programme id."]])
+
+(defn fetch-kafka-broker-endpoints [zk-host]
+  (zk/broker-list (zk/brokers {"zookeeper.connect" zk-host})))
 
 (defn load-config [filename]
   (with-open [r (io/reader filename)]
@@ -58,16 +63,16 @@
                                           :conn-timeout 20000}))
                                  (json/read-str))]
            response-json)
-         (catch Exception e (println e)))))
+         (catch Exception e (timbre/error e)))))
 
 (defn get-entity-ids [args-map]
   (-> (run-api-search args-map)
       (get-in ["entities"])))
 
 (defn -main [& args]
-  (let [{:keys [config username password] :as opts} (:options (parse-opts args cli-options))
-        base-system  (assoc (load-config config) :username username :password password)
-        system (assoc base-system :kafka-producer (kafka/producer {"metadata.broker.list" (:kafka-brokerlist base-system)
+  (let [{:keys [config username password aprogramme] :as opts} (:options (parse-opts args cli-options))
+        base-system  (assoc (load-config config) :username username :password password :programme-id aprogramme)
+        system (assoc base-system :kafka-producer (kafka/producer {"metadata.broker.list" (fetch-kafka-broker-endpoints (:zookeeper base-system))
                                                                    "serializer.class" "kafka.serializer.DefaultEncoder"
                                                                    "partitioner.class" "kafka.producer.DefaultPartitioner"}))]
     (->> (get-entity-ids system)

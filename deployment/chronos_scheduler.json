@@ -1,0 +1,23 @@
+{
+  "schedule": "R/2015-09-15T10:00:00Z/PT24H",
+    "environmentVariables": [{"name":"HECUBA_USER", "value":"support@mastodonc.com"},
+                             {"name":"HECUBA_PASS", "value":"password"},
+                             {"name":"PROGRAMME_ID", "value":"programme_id_here"}],
+  "name": "kixi-hecuba-weather-service",
+  "container": {
+    "type": "DOCKER",
+    "image": "mastodonc/kixi.hecuba.weather.service",
+    "network": "BRIDGE",
+    "volumes": [
+      {
+        "containerPath": "/var/log/",
+        "hostPath": "/logs/",
+        "mode": "RW"
+      }
+    ]
+  },
+  "cpus": "0.5",
+  "mem": "512",
+  "uris": [],
+  "command": "/opt/run_service.sh"
+}

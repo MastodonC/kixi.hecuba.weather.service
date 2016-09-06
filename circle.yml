@@ -1,0 +1,27 @@
+machine:
+  services:
+    - docker
+
+deployment:
+  #production:
+  #  tag: /release-.*/
+  #  commands:
+  #    - lein clean
+  #    - lein uberjar
+  #    - docker build -t mastodonc/kixi.hecuba.weather.service .
+  #    - docker tag -f mastodonc/kixi.hecuba.weather.service mastodonc/kixi.hecuba.weather.service:latest
+  #    - docker tag -f mastodonc/kixi.hecuba.weather.service mastodonc/kixi.hecuba.weather.service:git-$(echo $CIRCLE_SHA1 | cut -c1-12)
+  #    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+  #    - docker push mastodonc/kixi.hecuba.weather.service
+  #    - ./deploy.sh $DEPLOY_IP production
+  staging:
+    branch: feature/docker
+    commands:
+      - lein clean
+      - lein uberjar
+      - docker build -t mastodonc/kixi.hecuba.weather.service -f deployment/Dockerfile .
+      - docker tag -f mastodonc/kixi.hecuba.weather.service mastodonc/kixi.hecuba.weather.service:latest
+      - docker tag -f mastodonc/kixi.hecuba.weather.service mastodonc/kixi.hecuba.weather.service:git-$(echo $CIRCLE_SHA1 | cut -c1-12)
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push mastodonc/kixi.hecuba.weather.service
+      - ./deployment/deploy.sh kixi.hecuba.weather.service sandpit-staging-deploy.mastodonc.net staging 0 git-$(echo $CIRCLE_SHA1 | cut -c1-12)
